@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KhetKhata - किसान खाता</title>
+  <!-- Include Chart.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Updated CSS for clean, farmer-friendly UI */
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f0f0f0;
+      direction: ltr; /* Support Hindi text */
+    }
+    h1 {
+      text-align: center;
+      color: #2e7d32;
+      font-size: 24px;
+    }
+    h2, h3 {
+      color: #2e7d32;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .form-section, .summary-section {
+      margin-bottom: 20px;
+    }
+    .form-section label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: bold;
+    }
+    .form-section input, .form-section select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #4caf50;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #4caf50;
+      color: white;
+    }
+    .profit-positive { color: green; }
+    .profit-negative { color: red; }
+    .transaction-table {
+      margin-top: 10px;
+      background-color: #f9f9f9;
+    }
+    .chart-container {
+      margin: 20px 0;
+      max-width: 100%;
+    }
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      h1 { font-size: 20px; }
+      button { width: 100%; }
+      canvas { width: 100% !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>खेतखाता - अपने खेत का हिसाब रखें</h1>
+
+    <!-- Form to Add Field -->
+    <div class="form-section">
+      <h2>नया खेत जोड़ें</h2>
+      <label for="fieldName">खेत का नाम:</label>
+      <input type="text" id="fieldName" placeholder="उदाहरण: खेत 1" required>
+      <label for="cropType">फसल का प्रकार:</label>
+      <input type="text" id="cropType" placeholder="उदाहरण: गेहूं" required>
+      <button onclick="addField()">खेत जोड़ें</button>
+    </div>
+
+    <!-- Form to Add Expense or Income -->
+    <div class="form-section">
+      <h2>खर्च या आय जोड़ें</h2>
+      <label for="fieldSelect">खेत चुनें:</label>
+      <select id="fieldSelect"></select>
+      <label for="type">प्रकार:</label>
+      <select id="type">
+        <option value="expense">खर्च</option>
+        <option value="income">आय</option>
+      </select>
+      <label for="category">श्रेणी:</label>
+      <input type="text" id="category" placeholder="उदाहरण: बीज, मजदूरी, बिक्री">
+      <label for="amount">राशि (₹):</label>
+      <input type="number" id="amount" placeholder="उदाहरण: 1000" required>
+      <button onclick="addTransaction()">जोड़ें</button>
+    </div>
+
+    <!-- Summary Section -->
+    <div class="summary-section">
+      <h2>खेत का सारांश</h2>
+      <button onclick="exportToCSV()">CSV के रूप में डाउनलोड करें</button>
+      <!-- Chart Canvas -->
+      <div class="chart-container">
+        <canvas id="profitChart"></canvas>
+      </div>
+      <table id="summaryTable">
+        <thead>
+          <tr>
+            <th>खेत</th>
+            <th>फसल</th>
+            <th>कुल खर्च (₹)</th>
+            <th>कुल आय (₹)</th>
+            <th>लाभ/हानि (₹)</th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+      <!-- Detailed Transactions -->
+      <div id="detailedTransactions"></div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize data from localStorage or empty arrays
+    let fields = JSON.parse(localStorage.getItem('fields')) || [];
+    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+    let chart = null;
+
+    // Update UI on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      updateFieldDropdown();
+      updateSummary();
+      updateChart();
+    });
+
+    // Add a new field
+    function addField() {
+      const fieldName = document.getElementById('fieldName').value.trim();
+      const cropType = document.getElementById('cropType').value.trim();
+      if (!fieldName || !cropType) {
+        alert('कृपया खेत का नाम और फसल का प्रकार भरें।');
+        return;
+      }
+      fields.push({ id: Date.now(), name: fieldName, crop: cropType });
+      localStorage.setItem('fields', JSON.stringify(fields));
+      document.getElementById('fieldName').value = '';
+      document.getElementById('cropType').value = '';
+      updateFieldDropdown();
+      updateSummary();
+      updateChart();
+    }
+
+    // Add a new transaction (expense or income)
+    function addTransaction() {
+      const fieldId = document.getElementById('fieldSelect').value;
+      const type = document.getElementById('type').value;
+      const category = document.getElementById('category').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+      if (!fieldId || !category || isNaN(amount) || amount <= 0) {
+        alert('कृपया सभी विवरण सही से भरें।');
+        return;
+      }
+      transactions.push({ id: Date.now(), fieldId: parseInt(fieldId), type, category, amount });
+      localStorage.setItem('transactions', JSON.stringify(transactions));
+      document.getElementById('category').value = '';
+      document.getElementById('amount').value = '';
+      updateSummary();
+      updateChart();
+    }
+
+    // Update field dropdown
+    function updateFieldDropdown() {
+      const select = document.getElementById('fieldSelect');
+      select.innerHTML = '<option value="">खेत चुनें</option>';
+      fields.forEach(field => {
+        const option = document.createElement('option');
+        option.value = field.id;
+        option.textContent = `${field.name} (${field.crop})`;
+        select.appendChild(option);
+      });
+    }
+
+    // Update summary table and detailed transactions
+    function updateSummary() {
+      const tbody = document.getElementById('summaryBody');
+      const detailedDiv = document.getElementById('detailedTransactions');
+      tbody.innerHTML = '';
+      detailedDiv.innerHTML = '';
+
+      fields.forEach(field => {
+        const fieldTransactions = transactions.filter(t => t.fieldId === field.id);
+        const totalExpense = fieldTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + t.amount, 0);
+        const totalIncome = fieldTransactions
+          .filter(t => t.type === 'income')
+          .reduce((sum, t) => sum + t.amount, 0);
+        const profit = totalIncome - totalExpense;
+
+        // Summary table row (fixed HTML syntax)
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${field.name}</td>
+          <td>${field.crop}</td>
+          <td>${totalExpense.toFixed(2)}</td>
+          <td>${totalIncome.toFixed(2)}</td>
+          <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">
+            ${profit.toFixed(2)}
+          </td>
+        `;
+        tbody.appendChild(row);
+
+        // Detailed transaction table for this field
+        if (fieldTransactions.length > 0) {
+          const detailSection = document.createElement('div');
+          detailSection.innerHTML = `<h3>${field.name} (${field.crop}) का विवरण</h3>`;
+          const detailTable = document.createElement('table');
+          detailTable.className = 'transaction-table';
+          detailTable.innerHTML = `
+            <thead>
+              <tr>
+                <th>श्रेणी</th>
+                <th>प्रकार</th>
+                <th>राशि (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${fieldTransactions.map(t => `
+                <tr>
+                  <td>${t.category}</td>
+                  <td>${t.type === 'expense' ? 'खर्च' : 'आय'}</td>
+                  <td>${t.amount.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          `;
+          detailSection.appendChild(detailTable);
+          detailedDiv.appendChild(detailSection);
+        }
+      });
+    }
+
+    // Update bar chart
+    function updateChart() {
+      const ctx = document.getElementById('profitChart').getContext('2d');
+      const labels = fields.map(f => f.name);
+      const expenses = fields.map(f => {
+        return transactions
+          .filter(t => t.fieldId === f.id && t.type === 'expense')
+          .reduce((sum, t) => sum + t.amount, 0);
+      });
+      const incomes = fields.map(f => {
+        return transactions
+          .filter(t => t.fieldId === f.id && t.type === 'income')
+          .reduce((sum, t) => sum + t.amount, 0);
+      });
+
+      // Destroy existing chart if it exists
+      if (chart) {
+        chart.destroy();
+      }
+
+      // Create new chart
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'खर्च (₹)',
+              data: expenses,
+              backgroundColor: 'rgba(255, 99, 132, 0.5)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+              borderWidth: 1
+            },
+            {
+              label: 'आय (₹)',
+              data: incomes,
+              backgroundColor: 'rgba(75, 192, 192, 0.5)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'राशि (₹)' }
+            },
+            x: {
+              title: { display: true, text: 'खेत' }
+            }
+          },
+          plugins: {
+            legend: { display: true },
+            title: { display: true, text: 'खेत-वार खर्च और आय' }
+          }
+        }
+      });
+    }
+
+    // Export data to CSV
+    function exportToCSV() {
+      let csv = 'खेत,फसल,श्रेणी,प्रकार,राशि\n';
+      transactions.forEach(t => {
+        const field = fields.find(f => f.id === t.fieldId);
+        if (field) {
+          csv += `${field.name},${field.crop},${t.category},${t.type === 'expense' ? 'खर्च' : 'आय'},${t.amount}\n`;
+        }
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'KhetKhata_Data.csv';
+      link.click();
+    }
+  </script>
+</body>
+</html>

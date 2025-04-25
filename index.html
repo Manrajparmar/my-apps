@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home - My Apps</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-purple-100 min-h-screen font-poppins">
+  <!-- Navbar -->
+  <nav class="bg-white shadow-md p-4 sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-gray-800">My Apps</h1>
+      <div class="flex space-x-4">
+        <a href="index.html" class="text-gray-600 hover:text-blue-600">Home</a>
+        <a href="reminder-app.html" class="text-gray-600 hover:text-blue-600">Reminder</a>
+        <a href="kheti-khata.html" class="text-gray-600 hover:text-blue-600">Kheti Khata</a>
+        <a href="money-care.html" class="text-gray-600 hover:text-blue-600">Money Care</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto p-6">
+    <!-- Time-Based Message -->
+    <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Today's Tip</h2>
+      <p id="timeMessage" class="text-lg text-gray-600"></p>
+    </div>
+
+    <!-- Today's Reminders -->
+    <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Today's Reminders</h2>
+      <ul id="reminderList" class="space-y-3"></ul>
+    </div>
+
+    <!-- App Tiles -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Reminder App Tile -->
+      <a href="reminder-app.html" class="bg-white rounded-2xl shadow-xl p-6 hover:shadow-2xl transition transform hover:-translate-y-1">
+        <div class="flex items-center space-x-4">
+          <svg class="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800">Reminder App</h3>
+            <p class="text-gray-600">Never miss birthdays, meetings, or tasks.</p>
+          </div>
+        </div>
+      </a>
+
+      <!-- Kheti Khata Tile -->
+      <a href="kheti-khata.html" class="bg-white rounded-2xl shadow-xl p-6 hover:shadow-2xl transition transform hover:-translate-y-1">
+        <div class="flex items-center space-x-4">
+          <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 11h18m-6 4h6m-6 4h6M9 15H3m0 4h6" />
+          </svg>
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800">Kheti Khata</h3>
+            <p class="text-gray-600">Track farm expenses and profits easily.</p>
+          </div>
+        </div>
+      </a>
+
+      <!-- Money Care Tile -->
+      <a href="money-care.html" class="bg-white rounded-2xl shadow-xl p-6 hover:shadow-2xl transition transform hover:-translate-y-1">
+        <div class="flex items-center space-x-4">
+          <svg class="w-12 h-12 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800">Money Care</h3>
+            <p class="text-gray-600">Manage income, expenses, and savings.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Time-Based Message
+    function displayTimeMessage() {
+      const now = new Date();
+      const hours = now.getHours();
+      const messageElement = document.getElementById('timeMessage');
+
+      let message = '';
+      if (hours >= 5 && hours < 12) { // Morning
+        message = '🌞 Start your day with a refreshing walk to boost your health, or plan your finances for wealth!';
+      } else if (hours >= 12 && hours < 17) { // Afternoon
+        message = '🍲 Enjoy a healthy lunch and take a moment to stay productive for happiness and wealth!';
+      } else if (hours >= 17 && hours < 22) { // Evening
+        message = '🌅 Wind down with a light dinner and review your budget to stay on track for financial freedom!';
+      } else { // Night
+        message = '🌙 Prioritize a good night’s sleep for better health and reflect on what makes you happy!';
+      }
+
+      messageElement.textContent = message;
+    }
+
+    // Display Today's Reminders
+    function displayReminders() {
+      const reminderList = document.getElementById('reminderList');
+      reminderList.innerHTML = '';
+
+      const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const todayEnd = todayStart + 24 * 60 * 60 * 1000;
+
+      const todayReminders = tasks.filter(task => {
+        const taskDate = new Date(task.dateTime).getTime();
+        return taskDate >= todayStart && taskDate < todayEnd;
+      });
+
+      if (todayReminders.length === 0) {
+        reminderList.innerHTML = '<li class="text-gray-600">No reminders for today!</li>';
+        return;
+      }
+
+      todayReminders.sort((a, b) => a.dateTime - b.dateTime);
+      todayReminders.forEach(task => {
+        const li = document.createElement('li');
+        li.className = `p-3 border rounded-lg bg-gray-50 ${task.completed ? 'bg-green-100' : ''}`;
+        const taskDate = new Date(task.dateTime);
+        li.innerHTML = `
+          <span class="${task.completed ? 'text-gray-600' : 'text-gray-800'}">
+            ${task.name} - ${taskDate.toLocaleTimeString()}
+          </span>
+        `;
+        reminderList.appendChild(li);
+      });
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      displayTimeMessage();
+      displayReminders();
+    });
+  </script>
+</body>
+</html>

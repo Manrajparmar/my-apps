@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head Moldova (Republic of)>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reminder App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-purple-100 min-h-screen flex items-center justify-center p-4 font-poppins">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+    <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Reminder App</h1>
+
+    <!-- Task Input Form -->
+    <div class="space-y-4 mb-6">
+      <input type="text" id="taskInput" placeholder="Task/Event (e.g., Birthday, Meeting)" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <input type="datetime-local" id="dateTimeInput" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <input type="file" id="imageInput" accept="image/*" class="w-full p-2 border rounded-lg">
+      <button onclick="addTask()" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Add Task</button>
+    </div>
+
+    <!-- Task List -->
+    <ul id="taskList" class="space-y-3 max-h-96 overflow-y-auto"></ul>
+  </div>
+
+  <script>
+    // Load tasks from localStorage on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadTasks();
+      requestNotificationPermission();
+    });
+
+    // Request permission for notifications
+    function requestNotificationPermission() {
+      if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+      }
+    }
+
+    // Convert image to base64
+    function readImage(file, callback) {
+      const reader = new FileReader();
+      reader.onload = () => callback(reader.result);
+      reader.readAsDataURL(file);
+    }
+
+    // Add a new task
+    function addTask() {
+      const taskInput = document.getElementById('taskInput').value;
+      const dateTimeInput = document.getElementById('dateTimeInput').value;
+      const imageInput = document.getElementById('imageInput').files[0];
+
+      if (!taskInput || !dateTimeInput) {
+        alert('Please enter both task and date/time.');
+        return;
+      }
+
+      const task = {
+        id: Date.now(),
+        name: taskInput,
+        dateTime: new Date(dateTimeInput).getTime(),
+        completed: false,
+        image: null
+      };
+
+      // Handle image if provided
+      if (imageInput) {
+        readImage(imageInput, (base64Image) => {
+          task.image = base64Image;
+          saveTask(task);
+        });
+      } else {
+        saveTask(task);
+      }
+
+      // Clear inputs
+      document.getElementById('taskInput').value = '';
+      document.getElementById('dateTimeInput').value = '';
+      document.getElementById('imageInput').value = '';
+    }
+
+    // Save task to localStorage and reload
+    function saveTask(task) {
+      let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      tasks.push(task);
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      loadTasks();
+      scheduleNotification(task);
+    }
+
+    // Load and display tasks
+    function loadTasks() {
+      const taskList = document.getElementById('taskList');
+      taskList.innerHTML = '';
+
+      let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      tasks.sort((a, b) => a.dateTime - b.dateTime);
+
+      tasks.forEach(task => {
+        const li = document.createElement('li');
+        li.className = `p-4 border rounded-lg bg-gray-50 flex flex-col gap-2 ${task.completed ? 'bg-green-100' : ''}`;
+
+        const taskDate = new Date(task.dateTime);
+        const now = new Date();
+        const isOverdue = taskDate < now && !task.completed;
+
+        li.innerHTML = `
+          <div class="flex justify-between items-center">
+            <span class="text-lg font-medium ${isOverdue ? 'text-red-500' : 'text-gray-800'}">
+              ${task.name} - ${taskDate.toLocaleString()}
+            </span>
+            <div class="flex gap-2">
+              <button onclick="toggleComplete(${task.id})" class="bg-${task.completed ? 'yellow' : 'green'}-500 text-white px-3 py-1 rounded hover:bg-${task.completed ? 'yellow' : 'green'}-600">
+                ${task.completed ? 'Undo' : 'Done'}
+              </button>
+              <button onclick="deleteTask(${task.id})" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
+                Delete
+              </button>
+            </div>
+          </div>
+          ${task.image ? `<img src="${task.image}" alt="Task Image" class="w-full h-32 object-cover rounded-lg">` : ''}
+        `;
+        taskList.appendChild(li);
+      });
+    }
+
+    // Toggle task completion
+    function toggleComplete(id) {
+      let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      tasks = tasks.map(task => {
+        if (task.id === id) {
+          task.completed = !task.completed;
+        }
+        return task;
+      });
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      loadTasks();
+    }
+
+    // Delete a task
+    function deleteTask(id) {
+      let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      tasks = tasks.filter(task => task.id !== id);
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      loadTasks();
+    }
+
+    // Schedule a notification for the task
+    function scheduleNotification(task) {
+      const now = new Date().getTime();
+      const taskTime = task.dateTime;
+      const timeUntilTask = taskTime - now;
+
+      if (timeUntilTask > 0 && Notification.permission === 'granted') {
+        setTimeout(() => {
+          new Notification('Reminder', {
+            body: `Don't forget: ${task.name} is due now!`,
+            icon: task.image || null
+          });
+        }, timeUntilTask);
+      }
+    }
+  </script>
+</body>
+</html>
