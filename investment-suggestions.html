@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETF Investment Switch Advisor</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .recommendation {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .chart-container {
+            height: 400px;
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .allocation-bar {
+            height: 30px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .allocation-segment {
+            height: 100%;
+            float: left;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            line-height: 30px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ETF Investment Switch Advisor</h1>
+        
+        <div class="card">
+            <h2>Your Investment Strategy</h2>
+            <p>This tool helps you implement a strategy of switching between Fixed Deposits (FD) and ETFs based on price drops from 52-week highs:</p>
+            <ul>
+                <li>Invest in ETFs when their prices are 5% or more below 52-week highs</li>
+                <li>Investment amount = 2 × percentage drop</li>
+                <li>If all ETFs are less than 5% below their highs, keep all funds in FD</li>
+            </ul>
+        </div>
+
+
+        <div class="card">
+            <div>
+                Trailing Stop: Apply a trailing stop on unsold units to protect gains and limit losses if the price reverses (e.g., sell if price drops 3% from its peak after rising).
+                Tax Optimization: sell after one year and get 1.25 lakh profit and rebuy again,<12 months: 20% STCG, 12.5% LTCG (exempt if gains < ₹1.25 lakh)., Prioritize holding periods >12 months for LTCG (12.5% vs. 20% STCG). Suggest delaying sells if close to the 12-month threshold.
+            </div>
+            <h2>Investment Parameters</h2>
+            <div class="input-group">
+                <label for="totalAmount">Total Investment Amount (₹):</label>
+                <input type="number" id="totalAmount" value="100000">
+            </div>
+            <div class="input-group">
+                <label for="dropThreshold">Minimum Drop Threshold (%):</label>
+                <input type="number" id="dropThreshold" value="5">
+            </div>
+            <div class="input-group">
+                <label for="multiplier">Investment Multiplier:</label>
+                <input type="number" id="multiplier" value="2">
+            </div>
+            <button class="btn" id="analyzeBtn">Fetch Latest Data & Analyze</button>
+        </div>
+
+        <div id="statusMessage"></div>
+
+        <div class="card">
+            <h2>Market Data</h2>
+            <div id="loadingData" class="loading">Loading ETF data...</div>
+            <table id="etfTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>ETF</th>
+                        <th>Current Price (₹)</th>
+                        <th>52-Week High (₹)</th>
+                        <th>Drop (%)</th>
+                        <th>Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody id="etfTableBody">
+                    <!-- Data will be filled by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card recommendation" id="recommendationCard" style="display: none;">
+            <h2>Investment Recommendation</h2>
+            <div id="recommendation">
+                <!-- Recommendation text will be inserted here -->
+            </div>
+            <h3>Allocation Breakdown</h3>
+            <div class="allocation-bar" id="allocationBar">
+                <!-- Allocation segments will be generated here -->
+            </div>
+            <table id="allocationTable">
+                <thead>
+                    <tr>
+                        <th>Investment</th>
+                        <th>Percentage</th>
+                        <th>Amount (₹)</th>
+                    </tr>
+                </thead>
+                <tbody id="allocationTableBody">
+                    <!-- Data will be filled by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // ETF symbols and names mapping (Indian ETFs)
+        const etfSymbols = [
+            { symbol: "NIFTYBEES.BO", name: "NiftyBeES" },    // Nippon India ETF Nifty BeES
+            { symbol: "GOLDBEES.BO", name: "GoldBeES" },      // Nippon India ETF Gold BeES
+            { symbol: "BANKBEES.BO", name: "BankBeES" },      // Nippon India ETF Bank BeES
+        //    { symbol: "NETFIT.BO", name: "ITBeES" }           // Nippon India ETF Nifty IT (use NETFIT ETF)
+        ];
+
+        // Function to fetch ETF data using Alpha Vantage API
+        async function fetchETFData(symbol) {
+            // Using Alpha Vantage API (free tier)
+            const apiKey = "OYPGZQTSW2ARJ2CR"; // Get your own API key from alphavantage.co
+            const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${apiKey}`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                // Check for error response
+                if (data['Error Message']) {
+                    throw new Error(`API error: ${data['Error Message']}`);
+                }
+                
+                // Get the time series data
+                const timeSeries = data['Time Series (Daily)'];
+                console.log("timeSeries:", timeSeries)
+                if (!timeSeries) {
+                    throw new Error('No time series data available');
+                }
+                
+                // Get latest price (most recent date)
+                const dates = Object.keys(timeSeries).sort().reverse();
+                const latestDate = dates[0];
+                const currentPrice = parseFloat(timeSeries[latestDate]['4. close']);
+                
+                // Calculate 52-week high
+                // Get data from last 252 trading days (approx. 52 weeks)
+                const last52Weeks = dates.slice(0, 252);
+                let weekHigh = 0;
+                
+                for (const date of last52Weeks) {
+                    const high = parseFloat(timeSeries[date]['2. high']);
+                    if (high > weekHigh) {
+                        weekHigh = high;
+                    }
+                }
+                
+                return {
+                    currentPrice,
+                    weekHigh
+                };
+            } catch (error) {
+                console.error(`Error fetching data for ${symbol}:`, error);
+                throw error;
+            }
+        }
+
+        // Alternative function using Yahoo Finance API (via RapidAPI)
+        async function fetchETFDataYahoo(symbol) {
+            const options = {
+                method: 'GET',
+                headers: {
+                    'X-RapidAPI-Key': '5fb33bcd84msha634573a17bfb2bp14a1d0jsnb69a669aae95', // Get your key from RapidAPI
+                    'X-RapidAPI-Host': 'apidojo-yahoo-finance-v1.p.rapidapi.com'
+                }
+            };
+            
+            try {
+                // Get current price
+                const summaryUrl = `https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-summary?symbol=${symbol}&region=IN`;
+                const summaryResponse = await fetch(summaryUrl, options);
+                const summaryData = await summaryResponse.json();
+                
+                const currentPrice = summaryData.price.regularMarketPrice.raw;
+                const weekHigh = summaryData.summaryDetail.fiftyTwoWeekHigh.raw;
+                
+                return {
+                    currentPrice,
+                    weekHigh
+                };
+            } catch (error) {
+                console.error(`Error fetching Yahoo data for ${symbol}:`, error);
+                throw error;
+            }
+        }
+
+        // Function to calculate drop percentage
+        function calculateDrop(current, high) {
+            return ((high - current) / high) * 100;
+        }
+
+        // Function to analyze ETFs and make recommendations
+        async function analyzeETFs() {
+            const statusElement = document.getElementById('statusMessage');
+            const loadingElement = document.getElementById('loadingData');
+            const etfTable = document.getElementById('etfTable');
+            const recommendationCard = document.getElementById('recommendationCard');
+            
+            // Show loading state
+            statusElement.innerHTML = '';
+            loadingElement.style.display = 'block';
+            etfTable.style.display = 'none';
+            recommendationCard.style.display = 'none';
+            
+            try {
+                const totalAmount = parseFloat(document.getElementById('totalAmount').value);
+                const dropThreshold = parseFloat(document.getElementById('dropThreshold').value);
+                const multiplier = parseFloat(document.getElementById('multiplier').value);
+                
+                // Clear previous data
+                document.getElementById('etfTableBody').innerHTML = '';
+                document.getElementById('allocationTableBody').innerHTML = '';
+                
+                // Fetch data for all ETFs
+                const etfData = [];
+                
+                // To avoid API rate limits, we'll fetch ETFs sequentially with a delay
+                for (const etf of etfSymbols) {
+                    try {
+                        loadingElement.textContent = `Fetching data for ${etf.name}...`;
+                        // Try the Alpha Vantage API first
+                        const data = await fetchETFData(etf.symbol);
+                        // const data = await fetchETFDataYahoo(etf.symbol);
+                        console.log("data:", data)
+                        etfData.push({
+                            name: etf.name,
+                            currentPrice: data.currentPrice,
+                            weekHigh: data.weekHigh
+                        });
+                        
+                        // Add a delay to avoid hitting API rate limits (Alpha Vantage free tier is limited to 5 calls per minute)
+                        if (etf !== etfSymbols[etfSymbols.length - 1]) {
+                            await new Promise(resolve => setTimeout(resolve, 12000)); // 12 second delay
+                        }
+                    } catch (err) {
+                        // If Alpha Vantage fails, we could try the Yahoo Finance API as fallback
+                        // (commented out as it requires a RapidAPI key)
+                        /*
+                        try {
+                            loadingElement.textContent = `Retrying with alternate source for ${etf.name}...`;
+                            const yahooData = await fetchETFDataYahoo(etf.symbol);
+                            etfData.push({
+                                name: etf.name,
+                                currentPrice: yahooData.currentPrice,
+                                weekHigh: yahooData.weekHigh
+                            });
+                        } catch (yahooErr) {
+                            throw new Error(`Failed to fetch data for ${etf.name} from all sources`);
+                        }
+                        */
+                        
+                        // For now, just throw the error
+                        throw err;
+                    }
+                }
+                
+                let totalAllocation = 0;
+                const allocations = [];
+                
+                // Calculate drops and recommended allocations
+                etfData.forEach(etf => {
+                    const drop = calculateDrop(etf.currentPrice, etf.weekHigh);
+                    let allocation = 0;
+                    let recommendation = "No investment (Drop < " + dropThreshold + "%)";
+                    
+                    if (drop >= dropThreshold) {
+                        allocation = drop * multiplier;
+                        recommendation = `Invest ${allocation.toFixed(2)}% of funds`;
+                        allocations.push({
+                            name: etf.name,
+                            allocation: allocation,
+                            amount: (allocation / 100) * totalAmount
+                        });
+                        totalAllocation += allocation;
+                    }
+                    
+                    // Add to table
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${etf.name}</td>
+                        <td>${etf.currentPrice.toFixed(2)}</td>
+                        <td>${etf.weekHigh.toFixed(2)}</td>
+                        <td>${drop.toFixed(2)}%</td>
+                        <td>${recommendation}</td>
+                    `;
+                    document.getElementById('etfTableBody').appendChild(row);
+                });
+                
+                // Cap total allocation at 100%
+                let scaleFactor = 1;
+                if (totalAllocation > 100) {
+                    scaleFactor = 100 / totalAllocation;
+                    totalAllocation = 100;
+                }
+                
+                // Calculate FD allocation
+                const fdAllocation = 100 - totalAllocation;
+                
+                // Generate recommendation text
+                let recommendationText = '';
+                if (totalAllocation === 0) {
+                    recommendationText = `<p>Based on current market conditions, all ETFs are less than ${dropThreshold}% below their 52-week highs. Recommend keeping 100% (₹${totalAmount.toFixed(2)}) in Fixed Deposit.</p>`;
+                } else {
+                    recommendationText = `<p>Based on current market conditions, recommend the following allocation:</p>`;
+                }
+                
+                document.getElementById('recommendation').innerHTML = recommendationText;
+                
+                // Update allocation table
+                const allocationsWithFD = [...allocations];
+                if (fdAllocation > 0) {
+                    allocationsWithFD.push({
+                        name: "Fixed Deposit",
+                        allocation: fdAllocation,
+                        amount: (fdAllocation / 100) * totalAmount
+                    });
+                }
+                
+                               // Generate allocation bar
+                               const allocationBar = document.getElementById('allocationBar');
+                allocationBar.innerHTML = '';
+                
+                const colors = {
+                    "NiftyBeES": "#3498db",
+                    "GoldBeES": "#f1c40f",
+                    "BankBeES": "#2ecc71",
+                    "ITBeES": "#9b59b6",
+                    "Fixed Deposit": "#e74c3c"
+                };
+                
+                allocationsWithFD.forEach(item => {
+                    // Apply scaling if necessary
+                    const actualAllocation = item.name === "Fixed Deposit" ? 
+                        item.allocation : item.allocation * scaleFactor;
+                    
+                    const segment = document.createElement('div');
+                    segment.className = 'allocation-segment';
+                    segment.style.width = `${actualAllocation}%`;
+                    segment.style.backgroundColor = colors[item.name] || '#999';
+                    segment.textContent = `${actualAllocation.toFixed(1)}%`;
+                    allocationBar.appendChild(segment);
+                    
+                    // Add to allocation table
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.name}</td>
+                        <td>${actualAllocation.toFixed(2)}%</td>
+                        <td>₹${((actualAllocation / 100) * totalAmount).toFixed(2)}</td>
+                    `;
+                    document.getElementById('allocationTableBody').appendChild(row);
+                });
+                
+                // Show the results
+                loadingElement.style.display = 'none';
+                etfTable.style.display = 'table';
+                recommendationCard.style.display = 'block';
+                
+            } catch (error) {
+                console.error("Error analyzing ETFs:", error);
+                statusElement.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                        <p>This could be due to API rate limits or connection issues. Please try again later or use the fallback method below.</p>
+                    </div>
+                `;
+                loadingElement.style.display = 'none';
+                
+                // Show a fallback option for manual entry
+                statusElement.innerHTML += `
+                    <div class="card">
+                        <h3>Manual Data Entry</h3>
+                        <p>If API data cannot be retrieved, you can manually enter ETF prices:</p>
+                        <div id="manualEntryForm">
+                            <div class="input-group">
+                                <label for="niftyBees-current">NiftyBeES Current Price (₹):</label>
+                                <input type="number" id="niftyBees-current" value="">
+                            </div>
+                            <div class="input-group">
+                                <label for="niftyBees-high">NiftyBeES 52-Week High (₹):</label>
+                                <input type="number" id="niftyBees-high" value="">
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="goldBees-current">GoldBeES Current Price (₹):</label>
+                                <input type="number" id="goldBees-current" value="">
+                            </div>
+                            <div class="input-group">
+                                <label for="goldBees-high">GoldBeES 52-Week High (₹):</label>
+                                <input type="number" id="goldBees-high" value="">
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="bankBees-current">BankBeES Current Price (₹):</label>
+                                <input type="number" id="bankBees-current" value="">
+                            </div>
+                            <div class="input-group">
+                                <label for="bankBees-high">BankBeES 52-Week High (₹):</label>
+                                <input type="number" id="bankBees-high" value="">
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="itBees-current">ITBeES Current Price (₹):</label>
+                                <input type="number" id="itBees-current" value="">
+                            </div>
+                            <div class="input-group">
+                                <label for="itBees-high">ITBeES 52-Week High (₹):</label>
+                                <input type="number" id="itBees-high" value="">
+                            </div>
+                            
+                            <button class="btn" id="manualAnalyzeBtn">Analyze with Manual Data</button>
+                        </div>
+                    </div>
+                `;
+                
+                // Add event listener for manual analysis
+                document.getElementById('manualAnalyzeBtn').addEventListener('click', analyzeWithManualData);
+            }
+        }
+        
+        // Function to analyze using manually entered data
+        function analyzeWithManualData() {
+            const statusElement = document.getElementById('statusMessage');
+            const loadingElement = document.getElementById('loadingData');
+            const etfTable = document.getElementById('etfTable');
+            const recommendationCard = document.getElementById('recommendationCard');
+            
+            try {
+                const totalAmount = parseFloat(document.getElementById('totalAmount').value);
+                const dropThreshold = parseFloat(document.getElementById('dropThreshold').value);
+                const multiplier = parseFloat(document.getElementById('multiplier').value);
+                
+                // Get manual input values
+                const manualData = [
+                    {
+                        name: "NiftyBeES",
+                        currentPrice: parseFloat(document.getElementById('niftyBees-current').value),
+                        weekHigh: parseFloat(document.getElementById('niftyBees-high').value)
+                    },
+                    {
+                        name: "GoldBeES",
+                        currentPrice: parseFloat(document.getElementById('goldBees-current').value),
+                        weekHigh: parseFloat(document.getElementById('goldBees-high').value)
+                    },
+                    {
+                        name: "BankBeES",
+                        currentPrice: parseFloat(document.getElementById('bankBees-current').value),
+                        weekHigh: parseFloat(document.getElementById('bankBees-high').value)
+                    },
+                    {
+                        name: "ITBeES",
+                        currentPrice: parseFloat(document.getElementById('itBees-current').value),
+                        weekHigh: parseFloat(document.getElementById('itBees-high').value)
+                    }
+                ];
+                
+                // Clear previous data
+                document.getElementById('etfTableBody').innerHTML = '';
+                document.getElementById('allocationTableBody').innerHTML = '';
+                
+                let totalAllocation = 0;
+                const allocations = [];
+                
+                // Calculate drops and recommended allocations
+                manualData.forEach(etf => {
+                    const drop = calculateDrop(etf.currentPrice, etf.weekHigh);
+                    let allocation = 0;
+                    let recommendation = "No investment (Drop < " + dropThreshold + "%)";
+                    
+                    if (drop >= dropThreshold) {
+                        allocation = drop * multiplier;
+                        recommendation = `Invest ${allocation.toFixed(2)}% of funds`;
+                        allocations.push({
+                            name: etf.name,
+                            allocation: allocation,
+                            amount: (allocation / 100) * totalAmount
+                        });
+                        totalAllocation += allocation;
+                    }
+                    
+                    // Add to table
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${etf.name}</td>
+                        <td>${etf.currentPrice.toFixed(2)}</td>
+                        <td>${etf.weekHigh.toFixed(2)}</td>
+                        <td>${drop.toFixed(2)}%</td>
+                        <td>${recommendation}</td>
+                    `;
+                    document.getElementById('etfTableBody').appendChild(row);
+                });
+                
+                // Cap total allocation at 100%
+                let scaleFactor = 1;
+                if (totalAllocation > 100) {
+                    scaleFactor = 100 / totalAllocation;
+                    totalAllocation = 100;
+                }
+                
+                // Calculate FD allocation
+                const fdAllocation = 100 - totalAllocation;
+                
+                // Generate recommendation text
+                let recommendationText = '';
+                if (totalAllocation === 0) {
+                    recommendationText = `<p>Based on current market conditions, all ETFs are less than ${dropThreshold}% below their 52-week highs. Recommend keeping 100% (₹${totalAmount.toFixed(2)}) in Fixed Deposit.</p>`;
+                } else {
+                    recommendationText = `<p>Based on current market conditions, recommend the following allocation:</p>`;
+                }
+                
+                document.getElementById('recommendation').innerHTML = recommendationText;
+                
+                // Update allocation table
+                const allocationsWithFD = [...allocations];
+                if (fdAllocation > 0) {
+                    allocationsWithFD.push({
+                        name: "Fixed Deposit",
+                        allocation: fdAllocation,
+                        amount: (fdAllocation / 100) * totalAmount
+                    });
+                }
+                
+                // Generate allocation bar
+                const allocationBar = document.getElementById('allocationBar');
+                allocationBar.innerHTML = '';
+                
+                const colors = {
+                    "NiftyBeES": "#3498db",
+                    "GoldBeES": "#f1c40f",
+                    "BankBeES": "#2ecc71",
+                    "ITBeES": "#9b59b6",
+                    "Fixed Deposit": "#e74c3c"
+                };
+                
+                allocationsWithFD.forEach(item => {
+                    // Apply scaling if necessary
+                    const actualAllocation = item.name === "Fixed Deposit" ? 
+                        item.allocation : item.allocation * scaleFactor;
+                    
+                    const segment = document.createElement('div');
+                    segment.className = 'allocation-segment';
+                    segment.style.width = `${actualAllocation}%`;
+                    segment.style.backgroundColor = colors[item.name] || '#999';
+                    segment.textContent = `${actualAllocation.toFixed(1)}%`;
+                    allocationBar.appendChild(segment);
+                    
+                    // Add to allocation table
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.name}</td>
+                        <td>${actualAllocation.toFixed(2)}%</td>
+                        <td>₹${((actualAllocation / 100) * totalAmount).toFixed(2)}</td>
+                    `;
+                    document.getElementById('allocationTableBody').appendChild(row);
+                });
+                
+                // Show the results
+                loadingElement.style.display = 'none';
+                etfTable.style.display = 'table';
+                recommendationCard.style.display = 'block';
+                
+            } catch (error) {
+                console.error("Error analyzing with manual data:", error);
+                statusElement.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Function to fetch ETF data using another alternative API (Finnhub)
+        async function fetchETFDataFinnhub(symbol) {
+            const apiKey = "D68Y22OY5LIJBKQB"; // Get your API key from finnhub.io
+            
+            try {
+                // Get current price
+                const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`;
+                const quoteResponse = await fetch(quoteUrl);
+                const quoteData = await quoteResponse.json();
+                const currentPrice = quoteData.c; // Current price
+                
+                // Get 52-week high
+                const profileUrl = `https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${apiKey}`;
+                const profileResponse = await fetch(profileUrl);
+                const profileData = await profileResponse.json();
+                
+                // Get historical data to calculate 52-week high
+                const today = new Date();
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(today.getFullYear() - 1);
+                
+                const from = Math.floor(oneYearAgo.getTime() / 1000);
+                const to = Math.floor(today.getTime() / 1000);
+                
+                const candlesUrl = `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=D&from=${from}&to=${to}&token=${apiKey}`;
+                const candlesResponse = await fetch(candlesUrl);
+                const candlesData = await candlesResponse.json();
+                
+                // Find the highest high in the last year
+                const weekHigh = Math.max(...candlesData.h);
+                
+                return {
+                    currentPrice,
+                    weekHigh
+                };
+            } catch (error) {
+                console.error(`Error fetching Finnhub data for ${symbol}:`, error);
+                throw error;
+            }
+        }
+
+        // Initialize when document is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('analyzeBtn').addEventListener('click', analyzeETFs);
+            
+            // Optional: Fetch data automatically on page load
+             analyzeETFs();
+        });
+    </script>
+</body>
+</html>

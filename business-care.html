@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Expense Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans min-h-screen">
+    <div class="container mx-auto p-4 max-w-4xl">
+        <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-6">Business Expense Manager</h1>
+
+        <!-- Business/Service/Product Form -->
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 class="text-lg md:text-xl font-semibold text-gray-700 mb-4">Add Business/Service/Product</h2>
+            <form id="bspForm" class="space-y-4">
+                <div>
+                    <label for="bspName" class="block text-sm font-medium text-gray-600">Name (e.g., Onion, Tractor, Person, Milk, Rent)</label>
+                    <input type="text" id="bspName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">Add</button>
+            </form>
+            <p id="bspMessage" class="mt-2 text-sm text-green-600 hidden"></p>
+        </div>
+
+        <!-- Transaction Form -->
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 class="text-lg md:text-xl font-semibold text-gray-700 mb-4">Add Transaction</h2>
+            <form id="transactionForm" class="space-y-4">
+                <div>
+                    <label for="transactionBSP" class="block text-sm font-medium text-gray-600">Select Business/Service/Product</label>
+                    <select id="transactionBSP" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
+                        <option value="">Select an item</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="transactionType" class="block text-sm font-medium text-gray-600">Transaction Type</label>
+                    <select id="transactionType" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
+                        <option value="income">Income (e.g., Sale, Rent)</option>
+                        <option value="expense">Expense (e.g., Purchase, Labor, Marketing)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="transactionAmount" class="block text-sm font-medium text-gray-600">Amount (₹)</label>
+                    <input type="number" id="transactionAmount" min="0" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <div>
+                    <label for="transactionDescription" class="block text-sm font-medium text-gray-600">Description (e.g., Initial Purchase, Labor, Sold Onions)</label>
+                    <input type="text" id="transactionDescription" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="transactionDate" class="block text-sm font-medium text-gray-600">Date</label>
+                    <input type="date" id="transactionDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition">Add Transaction</button>
+            </form>
+            <p id="transactionMessage" class="mt-2 text-sm text-green-600 hidden"></p>
+        </div>
+
+        <!-- Business/Service/Product List -->
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 class="text-lg md:text-xl font-semibold text-gray-700 mb-4">Business/Service/Product List</h2>
+            <ul id="bspList" class="space-y-2"></ul>
+        </div>
+
+        <!-- Report Section -->
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <h2 class="text-lg md:text-xl font-semibold text-gray-700 mb-4">Reports</h2>
+            <div class="mb-4">
+                <label for="reportBSP" class="block text-sm font-medium text-gray-600">Select Business/Service/Product</label>
+                <select id="reportBSP" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">Select an item</option>
+                </select>
+            </div>
+            <button id="exportCSV" class="w-full md:w-auto bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition mb-4 hidden">Export to CSV</button>
+            <div id="reportSummary" class="mt-4 text-gray-700 mb-4"></div>
+            <div id="transactionList" class="mt-4">
+                <h3 class="text-md font-semibold text-gray-700 mb-2">Transactions</h3>
+                <div class="overflow-x-auto">
+                    <table id="transactionTable" class="min-w-full border border-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Date</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Type</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Amount (₹)</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTableBody" class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data storage
+        let bsps = JSON.parse(localStorage.getItem('bsps')) || [];
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Initializing app...');
+            updateBSPList();
+            updateBSPSelects();
+            renderReport();
+        });
+
+        // Show Message
+        function showMessage(elementId, message, error = false) {
+            const messageEl = document.getElementById(elementId);
+            messageEl.textContent = message;
+            messageEl.classList.remove('hidden', 'text-green-600', 'text-red-600');
+            messageEl.classList.add(error ? 'text-red-600' : 'text-green-600');
+            setTimeout(() => messageEl.classList.add('hidden'), 3000);
+        }
+
+        // Business/Service/Product Form Submission
+        document.getElementById('bspForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            console.log('BSP form submitted');
+            const nameInput = document.getElementById('bspName');
+            const name = nameInput.value.trim();
+            if (!name) {
+                showMessage('bspMessage', 'Name is required!', true);
+                return;
+            }
+            if (bsps.some(bsp => bsp.name.toLowerCase() === name.toLowerCase())) {
+                showMessage('bspMessage', 'This name already exists!', true);
+                return;
+            }
+            bsps.push({ name });
+            try {
+                localStorage.setItem('bsps', JSON.stringify(bsps));
+                console.log('BSP saved:', name);
+                updateBSPList();
+                updateBSPSelects();
+                nameInput.value = '';
+                showMessage('bspMessage', 'Added successfully!');
+            } catch (error) {
+                console.error('Error saving BSP:', error);
+                showMessage('bspMessage', 'Failed to save!', true);
+            }
+        });
+
+        // Transaction Form Submission
+        document.getElementById('transactionForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            console.log('Transaction form submitted');
+            const bsp = document.getElementById('transactionBSP').value;
+            const type = document.getElementById('transactionType').value;
+            const amount = parseFloat(document.getElementById('transactionAmount').value);
+            const description = document.getElementById('transactionDescription').value.trim();
+            const date = document.getElementById('transactionDate').value;
+
+            if (!bsp || !type || isNaN(amount) || amount <= 0 || !date) {
+                showMessage('transactionMessage', 'Please fill all required fields with valid data!', true);
+                return;
+            }
+
+            const transaction = { bsp, type, amount, description, date };
+            transactions.push(transaction);
+            try {
+                localStorage.setItem('transactions', JSON.stringify(transactions));
+                console.log('Transaction saved:', transaction);
+                document.getElementById('transactionForm').reset();
+                showMessage('transactionMessage', 'Transaction added successfully!');
+                renderReport();
+            } catch (error) {
+                console.error('Error saving transaction:', error);
+                showMessage('transactionMessage', 'Failed to save transaction!', true);
+            }
+        });
+
+        // Update Business/Service/Product List
+        function updateBSPList() {
+            const bspList = document.getElementById('bspList');
+            bspList.innerHTML = '';
+            if (bsps.length === 0) {
+                bspList.innerHTML = '<p class="text-gray-500">No items added yet.</p>';
+                return;
+            }
+            bsps.forEach(bsp => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 border-b border-gray-200';
+                li.innerHTML = `
+                    <span class="text-gray-700">${bsp.name}</span>
+                    <button onclick="deleteBSP('${bsp.name}')" class="text-red-500 hover:text-red-700">Delete</button>
+                `;
+                bspList.appendChild(li);
+            });
+        }
+
+        // Update Business/Service/Product Select Dropdowns
+        function updateBSPSelects() {
+            const transactionSelect = document.getElementById('transactionBSP');
+            const reportSelect = document.getElementById('reportBSP');
+            transactionSelect.innerHTML = '<option value="">Select an item</option>';
+            reportSelect.innerHTML = '<option value="">Select an item</option>';
+            bsps.forEach(bsp => {
+                const option1 = document.createElement('option');
+                const option2 = document.createElement('option');
+                option1.value = option2.value = bsp.name;
+                option1.text = option2.text = bsp.name;
+                transactionSelect.appendChild(option1);
+                reportSelect.appendChild(option2);
+            });
+        }
+
+        // Delete Business/Service/Product
+        function deleteBSP(name) {
+            if (confirm(`Are you sure you want to delete ${name}? All related transactions will be deleted.`)) {
+                console.log('Deleting BSP:', name);
+                bsps = bsps.filter(bsp => bsp.name !== name);
+                transactions = transactions.filter(transaction => transaction.bsp !== name);
+                try {
+                    localStorage.setItem('bsps', JSON.stringify(bsps));
+                    localStorage.setItem('transactions', JSON.stringify(transactions));
+                    updateBSPList();
+                    updateBSPSelects();
+                    renderReport();
+                } catch (error) {
+                    console.error('Error deleting BSP:', error);
+                    showMessage('bspMessage', 'Failed to delete!', true);
+                }
+            }
+        }
+
+        // Render Report
+        function renderReport() {
+            const selectedBSP = document.getElementById('reportBSP').value;
+            const summaryDiv = document.getElementById('reportSummary');
+            const transactionTableBody = document.getElementById('transactionTableBody');
+            const exportButton = document.getElementById('exportCSV');
+
+            if (!selectedBSP) {
+                summaryDiv.innerHTML = '<p class="text-gray-500">Please select a Business/Service/Product to view the report.</p>';
+                transactionTableBody.innerHTML = '<tr><td colspan="4" class="px-4 py-2 text-gray-500 text-center">No transactions available.</td></tr>';
+                exportButton.classList.add('hidden');
+                return;
+            }
+
+            exportButton.classList.remove('hidden');
+
+            const bspTransactions = transactions.filter(t => t.bsp === selectedBSP);
+
+            // Populate transaction list
+            transactionTableBody.innerHTML = '';
+            if (bspTransactions.length === 0) {
+                transactionTableBody.innerHTML = '<tr><td colspan="4" class="px-4 py-2 text-gray-500 text-center">No transactions available.</td></tr>';
+            } else {
+                bspTransactions.forEach(t => {
+                    const tr = document.createElement('tr');
+                    const rowClass = t.type === 'income' ? 'bg-green-100' : 'bg-red-100';
+                    tr.className = rowClass;
+                    tr.innerHTML = `
+                        <td class="px-4 py-2 text-gray-700">${t.date}</td>
+                        <td class="px-4 py-2 text-gray-700">${t.type.charAt(0).toUpperCase() + t.type.slice(1)}</td>
+                        <td class="px-4 py-2 text-gray-700">₹${t.amount.toFixed(2)}</td>
+                        <td class="px-4 py-2 text-gray-700">${t.description || '-'}</td>
+                    `;
+                    transactionTableBody.appendChild(tr);
+                });
+            }
+
+            // Calculate summary
+            const totalIncome = bspTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const totalExpense = bspTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const totalProfit = totalIncome - totalExpense;
+            const profitPercentage = totalExpense ? ((totalProfit / totalExpense) * 100).toFixed(2) : 0;
+            const profitColorClass = totalProfit >= 0 ? 'text-green-600' : 'text-red-600';
+
+            // Summary
+            summaryDiv.innerHTML = `
+                <p><strong>Total Income:</strong> ₹${totalIncome.toFixed(2)}</p>
+                <p><strong>Total Expense:</strong> ₹${totalExpense.toFixed(2)}</p>
+                <p class="${profitColorClass}"><strong>Total Profit/Loss:</strong> ₹${totalProfit.toFixed(2)}</p>
+                <p class="${profitColorClass}"><strong>Profit Percentage:</strong> ${profitPercentage}%</p>
+            `;
+        }
+
+        // Export to CSV
+        document.getElementById('exportCSV').addEventListener('click', () => {
+            const selectedBSP = document.getElementById('reportBSP').value;
+            if (!selectedBSP) return;
+
+            const bspTransactions = transactions.filter(t => t.bsp === selectedBSP);
+            if (bspTransactions.length === 0) {
+                alert('No transactions to export.');
+                return;
+            }
+
+            const headers = ['Date', 'Type', 'Amount', 'Description'];
+            const csvRows = [headers.join(',')];
+
+            bspTransactions.forEach(t => {
+                const row = [
+                    t.date,
+                    t.type.charAt(0).toUpperCase() + t.type.slice(1),
+                    t.amount.toFixed(2),
+                    `"${t.description.replace(/"/g, '""')}"`
+                ];
+                csvRows.push(row.join(','));
+            });
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${selectedBSP}_transactions.csv`;
+            link.click();
+        });
+
+        // Update Report on Business/Service/Product Selection
+        document.getElementById('reportBSP').addEventListener('change', renderReport);
+    </script>
+</body>
+</html>
